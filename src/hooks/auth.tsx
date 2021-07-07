@@ -1,14 +1,16 @@
 import React, { createContext, useContext, useState, ReactNode } from "react";
 
 import * as AuthSession from "expo-auth-session";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const {SCOPE}=process.env
-const {CLIENT_ID}=process.env
-const {CDN_IMAGE}=process.env
-const {REDIRECT_URI}=process.env
-const {RESPONSE_TYPE}=process.env
+const { SCOPE } = process.env;
+const { CLIENT_ID } = process.env;
+const { CDN_IMAGE } = process.env;
+const { REDIRECT_URI } = process.env;
+const { RESPONSE_TYPE } = process.env;
 
 import { api } from "../services/api";
+import { COLLECTION_USERS } from "../configs/database";
 
 type User = {
   id: string;
@@ -32,7 +34,7 @@ type AuthProviderProps = {
 type AuthorizationResponse = AuthSession.AuthSessionResult & {
   params: {
     access_token?: string;
-    error?:string;
+    error?: string;
   };
 };
 
@@ -52,19 +54,23 @@ function AuthProvider({ children }: AuthProviderProps) {
 
       if (type === "success" && !params.error) {
         api.defaults.headers.authorization = `Bearer ${params.access_token}`;
-        const userInfo= await api.get('/users/@me');
-        const firstName=userInfo.data.username.split(' ')[0];  // ele vai fazer isso ["thamyris", "gama"] ai vai pegar a primeira posição
-        userInfo.data.avatar=`${CDN_IMAGE}/avatars/${userInfo.data.id}/${userInfo.data.avatar}.png`;
+        const userInfo = await api.get("/users/@me");
+        const firstName = userInfo.data.username.split(" ")[0]; // ele vai fazer isso ["thamyris", "gama"] ai vai pegar a primeira posição
+        userInfo.data.avatar = `${CDN_IMAGE}/avatars/${userInfo.data.id}/${userInfo.data.avatar}.png`;
 
-        setUser({
+        const userData = {
           ...userInfo.data,
           firstName,
-          token:params.access_token
-        });
+          token: params.access_token,
+        };
+
+        await AsyncStorage.setItem(COLLECTION_USERS, JSON.stringify(userData)); // Json porque pegamos o objeto e transformamos em texto e quando recuperar , faremos o processo contrário
+
+        setUser(userData);
       }
     } catch {
       throw new Error("Não foi possível autenticar");
-    } finally{
+    } finally {
       setLoading(false);
     }
   }
@@ -74,7 +80,7 @@ function AuthProvider({ children }: AuthProviderProps) {
       value={{
         user,
         signIn,
-        loading
+        loading,
       }}
     >
       {children}
