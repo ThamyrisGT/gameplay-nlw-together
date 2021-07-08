@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
 
 import * as AuthSession from "expo-auth-session";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -75,6 +81,19 @@ function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
+  async function loadUserStorageData() {
+    const storage= await AsyncStorage.getItem(COLLECTION_USERS);
+    if(storage){
+      const userLogged = JSON.parse(storage) as User;
+      api.defaults.headers.authorization = `Bearer ${userLogged.token}`;
+
+      setUser(userLogged);
+    }
+  }
+  useEffect(() => {
+    loadUserStorageData();
+  }, []);
+  
   return (
     <AuthContext.Provider
       value={{
